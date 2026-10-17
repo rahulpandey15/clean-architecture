@@ -27,5 +27,10 @@ ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "eCommerce.API.dll"]
+
+# copy entrypoint script
+COPY eCommerce.API/docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 

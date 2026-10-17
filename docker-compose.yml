@@ -1,43 +1,52 @@
+version: '3.8'
+
 services:
-  ecommerce-api:
-    container_name: ecommerce-api
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ecommerce_db
+    environment:
+      SA_PASSWORD: "Rahul@123456789"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    volumes:
+      - dbdata:/var/opt/mssql
+
+  redis:
+    image: redis:7
+    container_name: ecommerce_redis
+    ports:
+      - "6379:6379"
+
+  api:
     build:
       context: .
       dockerfile: eCommerce.API/Dockerfile
+    container_name: ecommerce_api
+    depends_on:
+      - db
+      - redis
     environment:
-      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
-      ASPNETCORE_URLS: http://+:${API_INTERNAL_PORT:-8080}
-      ConnectionStrings__DatabaseConnection: ${API_CONNECTION_STRING:-}
-      Jwt__Secret: ${JWT_SECRET:-}
-      Jwt__Issuer: ${JWT_ISSUER:-eCommerceAPI}
-      Jwt__Audience: ${JWT_AUDIENCE:-eCommerceUI}
+      ConnectionStrings__DatabaseConnection: "Server=db,1433;Database=ecommerce;User Id=sa;Password=Rahul@123456789;TrustServerCertificate=True;"
+      Jwt__Issuer: "ecommerce-demo"
+      Jwt__Audience: "ecommerce-demo"
+      Jwt__Secret: "ChangeThisVerySecretKeyForDemoOnly"
     ports:
-      - "${API_HOST_PORT:-5285}:${API_INTERNAL_PORT:-8080}"
-    restart: unless-stopped
-    networks:
-      - ecommerce-net
+      - "5000:8080"
 
-  ecommerce-ui:
-    container_name: ecommerce-ui
+  ui:
     build:
       context: .
       dockerfile: eCommerce.UI/Dockerfile
-    environment:
-      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
-      ASPNETCORE_URLS: http://+:${UI_INTERNAL_PORT:-8080}
-      Api__BaseUrl: ${UI_API_BASE_URL:-http://ecommerce-api:${API_INTERNAL_PORT:-8080}}
-    ports:
-      - "${UI_HOST_PORT:-5204}:${UI_INTERNAL_PORT:-8080}"
+    container_name: ecommerce_ui
     depends_on:
-      ecommerce-api:
-        condition: service_started
-    restart: unless-stopped
-    networks:
-      - ecommerce-net
+      - api
+    environment:
+      eCommerceAPI__BaseAddress: "http://api:8080"
+    ports:
+      - "5001:8080"
 
-networks:
-  ecommerce-net:
-    name: ecommerce-net
-    driver: bridge
-
+volumes:
+  dbdata:
+    driver: local
 
