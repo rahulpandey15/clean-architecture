@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
+using eCommerce.Application.Jobs;
+using Hangfire;
 
 
 namespace eCommerce.API
@@ -67,7 +69,7 @@ namespace eCommerce.API
 
             builder.Services.AddApplication();
             builder.Services.AddInfrastructure(
-                builder.Configuration.GetConnectionString("DatabaseConnection")!);
+                builder.Configuration.GetConnectionString("DatabaseConnection")!,builder.Configuration);
 
             // register background worker hosted service (from infrastructure)
             builder.Services.AddHostedService<OrderProcessingService>();
@@ -90,7 +92,20 @@ namespace eCommerce.API
 
             app.UseAuthentication();
             app.UseAuthorization();
+
+            app.UseHangfireDashboard("/hangfire");
+            
             app.MapControllers();
+            
+            using (var scope = app.Services.CreateScope())
+            {
+                var jobs = scope.ServiceProvider.GetRequiredService<IBackgroundJobService>();
+                jobs.AddOrUpdateRecurring<OrderJobs>(
+                    "cleanup-abandoned-carts",
+                    j => j.CleanupAbandonedCartsAsync(),
+                    Cron.Daily());   // 00:00 UTC every day
+            }
+            
 
             app.Run();
         }
