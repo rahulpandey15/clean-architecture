@@ -1,9 +1,9 @@
-﻿using eCommerce.Domain.Contracts;
+using eCommerce.Domain.Contracts;
 using eCommerce.Infrastructure.Persistence.Entities;
 using eCommerce.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-
+using eCommerce.Infrastructure.Background;
 
 namespace eCommerce.Infrastructure
 {
@@ -24,6 +24,9 @@ namespace eCommerce.Infrastructure
             services.AddScoped<ICategoryRepository, CategoryRepository>();
             services.AddScoped<IProductRepository, ProductRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+
+            // Background job queue for processing orders
+            services.AddSingleton<IBackgroundJobQueue, BackgroundJobQueue>();
 
             return services;
         }

@@ -1,6 +1,7 @@
 using eCommerce.Application;
 using eCommerce.Application.Contracts;
 using eCommerce.Infrastructure;
+using eCommerce.Infrastructure.Background;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
@@ -67,6 +68,9 @@ namespace eCommerce.API
             builder.Services.AddApplication();
             builder.Services.AddInfrastructure(
                 builder.Configuration.GetConnectionString("DatabaseConnection")!);
+
+            // register background worker hosted service (from infrastructure)
+            builder.Services.AddHostedService<OrderProcessingService>();
 
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();

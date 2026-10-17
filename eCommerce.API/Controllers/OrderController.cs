@@ -1,20 +1,21 @@
-﻿using eCommerce.Application.DTO.Request;
+using eCommerce.Application.DTO.Request;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using eCommerce.Infrastructure.Persistence.Entities;
+using eCommerce.Domain.Contracts;
 
 namespace eCommerce.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class OrderController(AppDbContext dbContext) : ControllerBase
+    public class OrderController(AppDbContext dbContext, IBackgroundJobQueue jobQueue) : ControllerBase
     {
 
 
         [HttpGet]
-  
+
         public async Task<IActionResult> Get()
         {
             var orderResponse
@@ -30,7 +31,30 @@ namespace eCommerce.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Post(CreateOrderDto createOrderDto) {
 
-            return Ok();
+            // create order entity and persist
+            var order = new Order
+            {
+                OrderNumber = $"ORD-{DateTime.UtcNow.Ticks}",
+                TotalAmount = createOrderDto.Items.Sum(i => i.UnitPrice * i.Quantity),
+                Status = "Pending",
+                UserId = createOrderDto.UserId,
+                OrderItems = createOrderDto.Items.Select(i => new OrderItem
+                {
+                    ProductId = i.ProductId,
+                    ProductName = i.ProductName,
+                    Quantity = i.Quantity,
+                    UnitPrice = i.UnitPrice,
+                    TotalPrice = i.UnitPrice * i.Quantity
+                }).ToList()
+            };
+
+            dbContext.Orders.Add(order);
+            await dbContext.SaveChangesAsync();
+
+            // enqueue background job for processing (email/invoice generation)
+            jobQueue.EnqueueOrderProcessing(order.Id);
+
+            return Accepted(new { order.Id, order.OrderNumber });
         }
 
         // LINQ demo endpoints for orders
