@@ -3,12 +3,16 @@ using eCommerce.Application.Jobs;
 using eCommerce.Domain.Contracts;
 using eCommerce.Infrastructure.Persistence.Entities;
 using eCommerce.Infrastructure.Persistence.Repositories;
+using eCommerce.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using eCommerce.Infrastructure.Background;
 using Hangfire;
 using Hangfire.SqlServer;
 using Microsoft.Extensions.Configuration;
+using eCommerce.Application.Common.Messaging;
+using eCommerce.Infrastructure.Messaging.Outbox;
+using eCommerce.Infrastructure.Messaging.AzureServiceBus;
 
 namespace eCommerce.Infrastructure
 {
@@ -30,6 +34,18 @@ namespace eCommerce.Infrastructure
             services.AddScoped<ICategoryRepository, CategoryRepository>();
             services.AddScoped<IProductRepository, ProductRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+            services.AddScoped<IOrderPersistence, OrderPersistence>();
+            services.AddScoped<IOutboxWriter, OutboxWriter>();
+            services.AddScoped<OutboxMessageStore>();
+            services.Configure<OutboxProcessingOptions>(config.GetSection("Messaging:Outbox"));
+            services.Configure<ServiceBusOptions>(config.GetSection("AzureServiceBus"));
+            services.AddSingleton<ServiceBusClientProvider>();
+            services.AddSingleton<ServiceBusMessageSerializer>();
+            services.AddSingleton<AdvancedMessagingExamples>();
+            services.AddSingleton<AzureServiceBusEventPublisher>();
+            services.AddSingleton<IEventPublisher>(provider =>
+                provider.GetRequiredService<AzureServiceBusEventPublisher>());
+            services.AddHostedService<OutboxPublisherService>();
 
             // Background job queue for processing orders
             services.AddSingleton<IBackgroundJobQueue, BackgroundJobQueue>();

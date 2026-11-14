@@ -8,6 +8,10 @@ using System.Security.Claims;
 using System.Text;
 using eCommerce.Application.Jobs;
 using Hangfire;
+using eCommerce.Infrastructure.Messaging;
+using Serilog;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 
 
 namespace eCommerce.API
@@ -17,10 +21,26 @@ namespace eCommerce.API
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            builder.Host.UseSerilog((context, configuration) => configuration
+                .ReadFrom.Configuration(context.Configuration)
+                .Enrich.FromLogContext()
+                .WriteTo.Console());
+
+            builder.Services.AddOpenTelemetry()
+                .WithTracing(tracing => tracing
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddSource(MessagingTelemetry.ActivitySourceName)
+                    .AddOtlpExporter())
+                .WithMetrics(metrics => metrics
+                    .AddMeter(MessagingTelemetry.Meter.Name)
+                    .AddAspNetCoreInstrumentation()
+                    .AddOtlpExporter());
 
             // Add services to the container.
 
             builder.Services.AddControllers();
+            builder.Services.AddHealthChecks();
 
 
             builder.Services.AddStackExchangeRedisCache(options =>
@@ -96,6 +116,7 @@ namespace eCommerce.API
             app.UseHangfireDashboard("/hangfire");
             
             app.MapControllers();
+            app.MapHealthChecks("/health");
             
             using (var scope = app.Services.CreateScope())
             {

@@ -5,7 +5,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: ecommerce_db
     environment:
-      SA_PASSWORD: "Rahul@123456789"
+      SA_PASSWORD: "${SA_PASSWORD:?Set SA_PASSWORD in .env}"
       ACCEPT_EULA: "Y"
     ports:
       - "1433:1433"
@@ -26,11 +26,17 @@ services:
     depends_on:
       - db
       - redis
+    init: true
+    stop_grace_period: 30s
     environment:
-      ConnectionStrings__DatabaseConnection: "Server=db,1433;Database=ecommerce;User Id=sa;Password=Rahul@123456789;TrustServerCertificate=True;"
+      ConnectionStrings__DatabaseConnection: "${API_CONNECTION_STRING:?Set API_CONNECTION_STRING in .env}"
       Jwt__Issuer: "ecommerce-demo"
       Jwt__Audience: "ecommerce-demo"
-      Jwt__Secret: "ChangeThisVerySecretKeyForDemoOnly"
+      Jwt__Secret: "${JWT_SECRET:?Set JWT_SECRET in .env}"
+      AzureServiceBus__Enabled: "${AZURE_SERVICE_BUS_ENABLED:-false}"
+      AzureServiceBus__ConnectionString: "${AZURE_SERVICE_BUS_CONNECTION_STRING:-}"
+      AzureServiceBus__FullyQualifiedNamespace: "${AZURE_SERVICE_BUS_FULLY_QUALIFIED_NAMESPACE:-}"
+      AzureServiceBus__TopicName: "${AZURE_SERVICE_BUS_TOPIC_NAME:-order-events}"
     ports:
       - "5000:8080"
 
@@ -45,6 +51,22 @@ services:
       eCommerceAPI__BaseAddress: "http://api:8080"
     ports:
       - "5001:8080"
+
+  messaging-worker:
+    build:
+      context: .
+      dockerfile: eCommerce.Messaging.Worker/Dockerfile
+    container_name: ecommerce_messaging_worker
+    depends_on:
+      - db
+    init: true
+    stop_grace_period: 30s
+    environment:
+      ConnectionStrings__DatabaseConnection: "${API_CONNECTION_STRING:?Set API_CONNECTION_STRING in .env}"
+      AzureServiceBus__Enabled: "${AZURE_SERVICE_BUS_ENABLED:-false}"
+      AzureServiceBus__ConnectionString: "${AZURE_SERVICE_BUS_CONNECTION_STRING:-}"
+      AzureServiceBus__FullyQualifiedNamespace: "${AZURE_SERVICE_BUS_FULLY_QUALIFIED_NAMESPACE:-}"
+      AzureServiceBus__TopicName: "${AZURE_SERVICE_BUS_TOPIC_NAME:-order-events}"
 
 volumes:
   dbdata:

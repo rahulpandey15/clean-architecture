@@ -1,21 +1,33 @@
 ﻿using eCommerce.Application.Contracts;
 using eCommerce.Application.DTO.Request;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace eCommerce.Application.Implementation
 {
-    public class OrderService : IOrderService
+    public sealed class OrderService(IOrderPersistence orderPersistence) : IOrderService
     {
-        // TODO : Add a new Order Table
-        // Add a new Order Repository
-        // Write a logic to insert data inside Order Table
-
-
-        public Task<bool> CreateOrderAsync(CreateOrderDto orderDto)
+        public Task<OrderCreationResult> CreateOrderAsync(
+            CreateOrderDto orderDto,
+            string? correlationId,
+            CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            ArgumentNullException.ThrowIfNull(orderDto);
+            if (orderDto.UserId <= 0)
+            {
+                throw new ArgumentException("A valid user is required.", nameof(orderDto));
+            }
+
+            if (orderDto.Items.Count == 0)
+            {
+                throw new ArgumentException("An order must contain at least one item.", nameof(orderDto));
+            }
+
+            if (orderDto.Items.Any(item => item.ProductId <= 0 || item.Quantity <= 0 || item.UnitPrice < 0))
+            {
+                throw new ArgumentException("Order items must contain valid product, quantity, and price values.", nameof(orderDto));
+            }
+
+            var orderNumber = $"ORD-{DateTime.UtcNow.Ticks}";
+            return orderPersistence.CreateAsync(orderDto, orderNumber, correlationId, cancellationToken);
         }
     }
 }

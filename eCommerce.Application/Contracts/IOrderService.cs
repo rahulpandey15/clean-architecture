@@ -4,6 +4,9 @@ namespace eCommerce.Application.Contracts
 {
     public interface IOrderService
     {
-        Task<bool> CreateOrderAsync(CreateOrderDto orderDto);
+        Task<OrderCreationResult> CreateOrderAsync(
+            CreateOrderDto orderDto,
+            string? correlationId,
+            CancellationToken cancellationToken = default);
     }
 }
