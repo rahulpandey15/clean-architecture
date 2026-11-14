@@ -19,8 +19,12 @@
   <Folder Name="/src/Messaging/">
     <Project Path="eCommerce.Messaging.Worker/eCommerce.Messaging.Worker.csproj" />
   </Folder>
-  <Folder Name="/test/" />`r`n  <Project Path="eCommerce.Tests/eCommerce.Tests.csproj" />
+  <Folder Name="/test/" />
+  <Project Path="eCommerce.Tests/eCommerce.Tests.csproj" />
 </Solution>
+</Solution>
+
+
 
 
 

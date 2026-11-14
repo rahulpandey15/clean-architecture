@@ -9,7 +9,7 @@ namespace eCommerce.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+  //  [Authorize]
     public class OrderController(AppDbContext dbContext, IOrderService orderService) : ControllerBase
     {
 
